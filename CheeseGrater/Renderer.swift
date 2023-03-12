@@ -6,6 +6,7 @@
 //
 
 import MetalKit
+import MetalPerformanceShaders
 
 class Renderer: NSObject {
     
@@ -29,6 +30,8 @@ class Renderer: NSObject {
     private let commandQueue: MTLCommandQueue
     private let renderPipelineState: MTLRenderPipelineState
     private var meshes: [Mesh] = []
+    private var shader: MPSUnaryImageKernel?
+    private var schmusing = true
     
     public var clearColor = MTLClearColor() { didSet { view.clearColor = clearColor }}
     
@@ -62,6 +65,11 @@ class Renderer: NSObject {
         
         view.device = device
         view.delegate = self
+        
+        if schmusing {
+            view.framebufferOnly = false
+            shader = MPSImageGaussianBlur(device: device, sigma: 1)
+        }
     }
 }
 
@@ -81,6 +89,10 @@ extension Renderer: MTKViewDelegate {
                 $0.render(with: cmdEncoder)
             }
             cmdEncoder.endEncoding()
+            if let shader {
+                var texture = drawable.texture
+                shader.encode(commandBuffer: cmdBuffer, inPlaceTexture: &texture)
+            }
             cmdBuffer.present(drawable)
             cmdBuffer.commit()
         }
